@@ -1,0 +1,35 @@
+name: iOS_Build_Test
+on:
+  push:
+    branches: [ main ] # 만약 브랜치 이름이 master라면 master로 수정
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build iOS (No-Signing)
+        # 인증서 없이 빌드가 '성공'하는지만 체크하는 핵심 명령어
+        run: flutter build ios --release --no-codesign
+
+      # 🚀 여기서부터가 중요합니다: 윈도우 대신 깃허브(맥)가 직접 .ipa를 만듭니다.
+      - name: Create IPA Structure
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r app.ipa Payload
+          
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa-file
+          path: app.ipa
